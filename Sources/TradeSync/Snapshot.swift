@@ -95,7 +95,7 @@ enum Snapshot {
                               to: dir.appendingPathComponent("trade-review-synced.png"))
             }
 
-            let editor = AccountEditorSheet(account: TradingAccount(name: "Tradeify 50K"), isNew: true)
+            let editor = AccountEditorSheet(account: TradingAccount(name: "", type: .live, firm: "Personal Broker", connection: .metaTrader5, startingBalance: 10_000), isNew: true)
                 .environmentObject(store)
                 .environment(\.colorScheme, .dark)
             await capture(editor, size: CGSize(width: 640, height: 640),

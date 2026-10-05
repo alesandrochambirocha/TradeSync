@@ -67,10 +67,13 @@ struct MetaApiAccountInfo: Codable {
     let server: String?
     let state: String?
     let connectionStatus: String?
+    /// Where MetaApi hosts the account (e.g. new-york, london, vint-hill).
+    /// The trade-history API must be called in this same region.
+    let region: String?
 }
 
 struct MetaApiService {
-    let settings: MetaApiSettings
+    var settings: MetaApiSettings
 
     static let isoParser: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
@@ -172,9 +175,14 @@ struct MetaApiService {
 
     /// Full sync: pull deals (plus orders for SL/TP) and reconstruct closed trades.
     func fetchTrades(from start: Date, to end: Date, accountLabel: String) async throws -> [Trade] {
-        let deals = try await fetchDeals(from: start, to: end)
+        // Ask MetaApi which region hosts the account rather than trusting a stored value.
+        var service = self
+        if let region = try? await testConnection().region, !region.isEmpty {
+            service.settings.region = region
+        }
+        let deals = try await service.fetchDeals(from: start, to: end)
         // Orders are only a fallback source for SL/TP; a failure there shouldn't block the sync.
-        let orders = (try? await fetchOrders(from: start, to: end)) ?? []
+        let orders = (try? await service.fetchOrders(from: start, to: end)) ?? []
         return Self.buildTrades(from: deals, orders: orders, accountLabel: accountLabel)
     }
 

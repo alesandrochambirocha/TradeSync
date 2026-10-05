@@ -87,6 +87,7 @@ extension TradeStore {
         do {
             let info = try await MetaApiService(settings: account.metaApi).testConnection()
             account.metaApi.connectedAccountName = info.name
+            if let region = info.region, !region.isEmpty { account.metaApi.region = region }
             if account.brokerAccountNumber.isEmpty, let login = info.login { account.brokerAccountNumber = login }
             saveAccount(account)
             let name = info.name ?? info.login ?? "account"

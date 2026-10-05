@@ -46,8 +46,7 @@ struct SettingsView: View {
                               subtitle: "Each account keeps its own trades and stats. Switch between them from the sidebar.")
                 Spacer()
                 Button {
-                    editing = TradingAccount(name: "Tradeify 50K", type: .funded, firm: "Tradeify",
-                                             connection: .tradovateExport, startingBalance: 50_000)
+                    editing = TradingAccount(name: "", type: .live, firm: "Personal Broker", connection: .metaTrader5, startingBalance: 10_000)
                 } label: {
                     Label("Add Account", systemImage: "plus")
                 }
@@ -490,7 +489,7 @@ struct AccountEditorSheet: View {
                         RailLabel(text: "Account")
                         HStack(alignment: .top, spacing: 12) {
                             Field(label: "Name") {
-                                TextField("Tradeify 50K", text: $account.name).inputStyle()
+                                TextField("e.g. IC Markets Live, Tradeify 50K", text: $account.name).inputStyle()
                             }
                             Field(label: "Starting Balance ($)") {
                                 TextField("50000", value: $account.startingBalance, format: .number.locale(Locale(identifier: "en_US"))).inputStyle()
@@ -563,10 +562,19 @@ struct AccountEditorSheet: View {
                     account.brokerAccountNumber = account.brokerAccountNumber.trimmingCharacters(in: .whitespaces)
                     store.saveAccount(account)
                     if isNew { store.selectAccount(account.id) }
+                    // A new MT5 account connects and pulls its full history straight away.
+                    if isNew, account.connection == .metaTrader5, account.metaApi.isConfigured {
+                        let id = account.id
+                        Task {
+                            await store.testMetaTraderConnection(accountId: id)
+                            await store.syncMetaTrader(accountId: id, fullHistory: true)
+                        }
+                    }
                     dismiss()
                 }
                 .buttonStyle(PillButtonStyle(prominent: true))
                 .disabled(account.name.trimmingCharacters(in: .whitespaces).isEmpty)
+                .opacity(account.name.trimmingCharacters(in: .whitespaces).isEmpty ? 0.45 : 1)
                 .keyboardShortcut(.defaultAction)
             }
             .padding(.horizontal, 20)
@@ -618,10 +626,13 @@ struct AccountEditorSheet: View {
                         TextField("865d3a4d-…", text: $account.metaApi.accountId).inputStyle()
                     }
                     Field(label: "Region") {
-                        Picker("", selection: $account.metaApi.region) {
-                            ForEach(["london", "new-york", "singapore", "tokyo"], id: \.self) { Text($0).tag($0) }
-                        }
-                        .labelsHidden()
+                        Text(account.metaApi.connectedAccountName == nil
+                             ? "Detected automatically"
+                             : account.metaApi.region)
+                            .font(.system(size: 12))
+                            .foregroundColor(Theme.textSecondary)
+                            .padding(.vertical, 7)
+                            .help("TradeSync asks MetaApi where your account is hosted, so there's nothing to choose.")
                     }
                 }
                 if !isNew {
