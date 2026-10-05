@@ -1,0 +1,15 @@
+# Build output
+.build/
+build/
+.swiftpm/
+
+# Local tooling
+.claude/
+
+# macOS
+.DS_Store
+
+# Reference images kept locally, not part of the app
+/*.jpg
+/*.jpeg
+/*.png
